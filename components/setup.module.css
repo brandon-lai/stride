@@ -1,0 +1,27 @@
+/* §2's screen-distance problem applies here too: the player is stepping back
+   during framing, so the instructions must stay readable from 2.5m. */
+.root { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr 1fr; background: #0b0f17; }
+@media (max-width: 900px) { .root { grid-template-columns: 1fr; } }
+
+.stage { position: relative; background: #0e1524; overflow: hidden; }
+.video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.outline { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.panel { display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: 5vmin; }
+.panel h1 { font-size: 7vmin; margin: 0; line-height: 1; font-weight: 800; }
+.lead { font-size: 3vmin; margin: 0; color: #9aa6bd; line-height: 1.45; }
+.reqs { margin: 0; padding-left: 3vmin; font-size: 2.4vmin; color: #cbd6ea; line-height: 1.9; }
+.diagram { width: 100%; max-width: 340px; height: auto; }
+.privacy { font-size: 2vmin; color: #6f7b93; margin: 0; line-height: 1.5; max-width: 46ch; }
+.metric { font-size: 4vmin; margin: 0; color: #4dd2ff; font-family: ui-monospace, monospace; font-weight: 700; }
+.count { font-size: 2vmin; color: #6f7b93; margin: 0; font-family: ui-monospace, monospace; }
+
+.cta {
+  align-self: flex-start; font-size: 3vmin; font-weight: 800; padding: 2vmin 5vmin;
+  border: 0; border-radius: 1.4vmin; background: #4dd2ff; color: #06222b; cursor: pointer;
+  text-decoration: none; font-family: inherit;
+}
+.alt { font-size: 2.2vmin; color: #6f7b93; text-decoration: underline; text-underline-offset: 4px; }
+
+.bar { width: 100%; max-width: 420px; height: 1.6vmin; min-height: 10px; background: #16203a; border-radius: 999px; overflow: hidden; }
+.barFill { height: 100%; transition: width 90ms linear; }

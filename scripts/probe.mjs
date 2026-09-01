@@ -45,6 +45,17 @@ const chrome = spawn(
     ...(process.env.GL
       ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--use-gl=angle"]
       : ["--disable-gpu"]),
+    /*
+     * CAM=1 grants camera permission automatically and feeds a synthetic test
+     * pattern, so a getUserMedia flow can be driven headless: the permission
+     * path, the "no person detected" path and the teardown are all reachable.
+     * It cannot test whether a real body is tracked correctly -- the fake
+     * device contains no person -- which is exactly why it is useful for the
+     * failure paths.
+     */
+    ...(process.env.CAM
+      ? ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-capture"]
+      : []),
     "--hide-scrollbars",
     "--no-first-run",
     `--remote-debugging-port=${PORT}`,

@@ -1,0 +1,40 @@
+.root { padding: 16px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; height: 100vh; overflow: auto; }
+.head { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; }
+.head h1 { font-size: 16px; margin: 0; letter-spacing: 0.1em; text-transform: uppercase; color: #8b97b0; }
+.sources { display: flex; gap: 8px; align-items: center; }
+.sources button {
+  background: #16203a; border: 1px solid #2b3c60; color: #cbd6ea; padding: 5px 12px;
+  border-radius: 6px; cursor: pointer; font: inherit; font-size: 12px;
+}
+.sources .on { background: #4dd2ff; color: #06222b; border-color: #4dd2ff; }
+.status { font-size: 12px; color: #7f8ba3; }
+
+.grid { display: grid; grid-template-columns: minmax(320px, 1fr) 240px 200px 280px; gap: 16px; margin-top: 16px; }
+@media (max-width: 1100px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+.feed { position: relative; background: #0e1524; border: 1px solid #22304d; border-radius: 8px; overflow: hidden; min-height: 240px; }
+.video { width: 100%; display: block; transform: scaleX(-1); }
+.overlay { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+.denied { position: absolute; inset: 12px; margin: 0; font-size: 12px; color: #ffb020; line-height: 1.5; }
+.calBtn {
+  position: absolute; left: 12px; bottom: 12px; background: #4dd2ff; color: #06222b;
+  border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; font-size: 12px; cursor: pointer;
+}
+
+.root h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: #6f7b93; margin: 0 0 8px; }
+.readouts, .fires, .tunables { background: #0e1524; border: 1px solid #22304d; border-radius: 8px; padding: 12px; }
+.readouts dl { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; margin: 0; font-size: 12px; }
+.readouts dt { color: #7f8ba3; }
+.readouts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.warm { color: #ffb020; }
+.hot { color: #ff3d55; font-weight: 700; }
+
+.fires ul { list-style: none; margin: 0; padding: 0; font-size: 12px; line-height: 1.9; }
+.dim { color: #5d6a83; }
+
+.tunables label { display: grid; grid-template-columns: 1fr; gap: 2px; font-size: 11px; margin-bottom: 8px; color: #8b97b0; }
+.tunables input[type=range] { width: 100%; }
+.tunables output { font-size: 11px; color: #cbd6ea; text-align: right; font-variant-numeric: tabular-nums; }
+.tunables select { background: #16203a; color: #cbd6ea; border: 1px solid #2b3c60; border-radius: 5px; padding: 4px; font: inherit; font-size: 11px; }
+.tunables button { margin-top: 6px; background: #16203a; border: 1px solid #2b3c60; color: #cbd6ea; padding: 5px 12px; border-radius: 6px; cursor: pointer; font: inherit; font-size: 11px; }
+.mode { margin-top: 10px; }

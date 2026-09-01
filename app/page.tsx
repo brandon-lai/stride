@@ -1,69 +1,28 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main style={{
+      position: "fixed", inset: 0, display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", gap: 18, padding: "6vmin", textAlign: "center",
+    }}>
+      <h1 style={{ fontSize: "9vmin", margin: 0, fontWeight: 800, lineHeight: 1 }}>Stride</h1>
+      <p style={{ fontSize: "3vmin", color: "#9aa6bd", margin: 0, maxWidth: "28ch", lineHeight: 1.4 }}>
+        An endless runner you play by actually running. Webcam only, nothing uploaded.
+      </p>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center", marginTop: "2vmin" }}>
+        <Link href="/run/" style={{
+          fontSize: "3vmin", fontWeight: 800, padding: "2vmin 5vmin", borderRadius: "1.4vmin",
+          background: "#4dd2ff", color: "#06222b", textDecoration: "none",
+        }}>Stand up and play</Link>
+        <Link href="/play/" style={{
+          fontSize: "3vmin", fontWeight: 700, padding: "2vmin 5vmin", borderRadius: "1.4vmin",
+          background: "transparent", color: "#cbd6ea", textDecoration: "none", border: "2px solid #2b3c60",
+        }}>Keyboard</Link>
+      </div>
+      <Link href="/debug/" style={{ fontSize: "2vmin", color: "#5d6a83", marginTop: "3vmin" }}>
+        pose debug
+      </Link>
+    </main>
   );
 }

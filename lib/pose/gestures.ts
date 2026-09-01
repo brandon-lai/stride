@@ -137,7 +137,7 @@ export class GestureDetector {
     spm: 0, cadenceMult: 1, centerX: 0, confidence: 0, stalledFor: 0, arbitrating: false,
   };
 
-  constructor(private cal: Calibration, public tune: Tunables = { ...DEFAULTS }) {
+  constructor(readonly cal: Calibration, public tune: Tunables = { ...DEFAULTS }) {
     this.center = cal.centerX;
   }
 
