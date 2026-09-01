@@ -109,9 +109,13 @@ export class TrackGenerator {
     return r < 0.26 ? "low" : r < 0.5 ? "overhead" : r < 0.78 ? "block" : "train";
   }
 
-  /** Extra metres beyond the floor, so the rhythm is not metronomic. */
+  /**
+   * Extra metres beyond the floor, so the rhythm is not metronomic. Kept small
+   * now that the floor itself is large: the floor is set by landing before the
+   * next obstacle, and piling more randomness on top just thins the track out.
+   */
   private gap(): number {
-    return MIN_GAP_M + this.rng() * 11;
+    return MIN_GAP_M + this.rng() * 7;
   }
 
   private arcOver(z: number, lane: number) {

@@ -14,18 +14,50 @@
  * down. What playtesting must not do is raise it without also widening the gap.
  */
 
-/** Metres between consecutive obstacle events. A design choice. */
-export const MIN_GAP_M = 17;
-
-/** §5. Seconds of reaction the player is owed at any speed. */
+/**
+ * §5. Seconds of reaction the player is owed at any speed.
+ */
 export const MIN_REACTION_S = 0.7;
 
-/** §5's cap, derived. Never raise this without raising MIN_GAP_M with it. */
-export const MAX_SPEED = MIN_GAP_M / MIN_REACTION_S; // 24.28 m/s
+/**
+ * The speed cap. §5 says this is "the key tuning number; find it by playtest,
+ * not by theory" -- and playtesting said the game was too slow, so this is now
+ * the primary number and the obstacle spacing derives from it, rather than the
+ * other way round.
+ */
+export const MAX_SPEED = 37;
 
-/** Starting speed, and how far it takes to ramp to the cap. */
-export const START_SPEED = 9;
-export const RAMP_DISTANCE_M = 1400;
+/**
+ * How long the character stays off the ground, from JUMP_VELOCITY and GRAVITY
+ * below. This turns out to bound the obstacle spacing harder than §5's reaction
+ * floor does, which only became visible once the speed went up.
+ *
+ * At the old cap the gap was 0.70s and the jump lasted 1.0s -- so a player who
+ * jumped one barrier was still in the air when the next arrived, could not jump
+ * again, and landed inside it. That is not difficulty, it is a rule the game
+ * never told anyone: obstacles must be far enough apart that you are back on
+ * your feet before the next one, or jumping is a trap.
+ */
+export const JUMP_AIRTIME_S = 1.0;
+const LANDING_MARGIN_S = 0.14;
+
+/**
+ * Metres between consecutive obstacle events, derived from whichever constraint
+ * binds harder: §5's reaction floor, or landing before the next obstacle.
+ */
+export const MIN_GAP_M = MAX_SPEED * Math.max(MIN_REACTION_S, JUMP_AIRTIME_S + LANDING_MARGIN_S);
+
+/**
+ * Starting speed, and how far it takes to ramp to the cap.
+ *
+ * The old values reached the cap after about 84 seconds, which is most of a
+ * §2 session (60-180s) spent below it -- so the game felt slow almost all of
+ * the time even though its top speed was fine. Starting near twice as fast and
+ * ramping in roughly a third of the distance fixes the part players actually
+ * experience.
+ */
+export const START_SPEED = 17;
+export const RAMP_DISTANCE_M = 800;
 
 /**
  * §3: "a speed multiplier from 0.5x to 1.3x driven by steps per minute".
@@ -35,6 +67,21 @@ export const RAMP_DISTANCE_M = 1400;
  */
 export const CADENCE_MULT_MIN = 0.5;
 export const CADENCE_MULT_MAX = 1.3;
+
+/**
+ * Stop running and the run ends.
+ *
+ * §3 designs the opposite: below floor cadence the character "slows and
+ * eventually stalls", explicitly so someone pausing to breathe is not killed.
+ * Playtesting overruled it -- without a real fail state, standing still is a
+ * free rest and the workout §1 asks for evaporates. Five seconds is not
+ * "instantly", which is the thing §3 was actually protecting against, and the
+ * character still visibly slows for the first few before it becomes fatal.
+ */
+export const STALL_DEATH_S = 5;
+
+/** At or below this multiplier, the player is not running (§3's floor). */
+export const STALL_MULT = CADENCE_MULT_MIN + 0.02;
 
 /**
  * Three lanes (§5), 2.6m apart.
@@ -73,6 +120,7 @@ export const MAX_INPUT_LAG_S = 0.25;
 
 export const JUMP_VELOCITY = 6.0;
 export const GRAVITY = 12;
+// JUMP_AIRTIME_S above must equal 2 * JUMP_VELOCITY / GRAVITY; a test asserts it.
 export const LOW_BARRIER_HEIGHT = 0.6;
 
 /** §3: "ducking can afford a small hold". How long a duck lasts once fired. */

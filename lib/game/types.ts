@@ -55,8 +55,11 @@ export type RunState = {
   player: PlayerState;
   obstacles: Obstacle[];
   coinsOnTrack: Coin[];
-  /** What killed the run, for the score screen. */
-  killedBy: ObstacleKind | null;
+  /** What killed the run, for the score screen. "stalled" is running out of
+   *  cadence rather than hitting anything. */
+  killedBy: ObstacleKind | "stalled" | null;
+  /** Seconds spent below the running cadence floor. */
+  stalledFor: number;
   elapsed: number;
   /**
    * Feedback fired this step, drained by the caller. §2 requires audio cues for

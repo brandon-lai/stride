@@ -43,6 +43,13 @@ type Opts = {
   /** Deterministic jitter amplitude, in torso lengths. */
   jitter?: number;
   seed?: number;
+  /**
+   * How much the torso rises and falls with each step, in torso lengths.
+   * This is the signal that a loose jump threshold mistakes for a jump, so it
+   * is adjustable: a heavy runner bobs far more than a light one, and the
+   * thresholds have to clear the worst case rather than the average.
+   */
+  bob?: number;
 };
 
 function rng(seed: number) {
@@ -64,7 +71,7 @@ export function stream(
   opts: Opts = {},
   motion: (t: number) => Partial<{ dHipY: number; dHipX: number; dShoulderY: number }> = () => ({})
 ): Frame[] {
-  const { spm = 0, jitter = 0.004, seed = 7 } = opts;
+  const { spm = 0, jitter = 0.004, seed = 7, bob: bobAmp = 0.035 } = opts;
   const r = rng(seed);
   const T = BODY.torso;
   const out: Frame[] = [];
@@ -84,7 +91,7 @@ export function stream(
     const lift = spm > 0 ? 0.36 * T : 0;
     const leftLift = spm > 0 ? Math.max(0, Math.sin(phase)) * lift : 0;
     const rightLift = spm > 0 ? Math.max(0, Math.sin(phase + Math.PI)) * lift : 0;
-    const bob = spm > 0 ? Math.sin(phase * 2) * 0.035 * T : 0;
+    const bob = spm > 0 ? Math.sin(phase * 2) * bobAmp * T : 0;
 
     const j = () => (r() - 0.5) * 2 * jitter * T;
 

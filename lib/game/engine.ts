@@ -5,6 +5,7 @@ import {
   JUMP_VELOCITY, GRAVITY, LOW_BARRIER_HEIGHT, DUCK_S, OVERHEAD_CLEARANCE,
   DUCK_HEIGHT, PLAYER_HALF_WIDTH, PLAYER_HEIGHT, SPAWN_AHEAD_M, DESPAWN_BEHIND_M,
   COIN_POINTS, CADENCE_MULT_MIN, CADENCE_MULT_MAX, CHEST_HEIGHT, COIN_REACH,
+  STALL_DEATH_S, STALL_MULT,
 } from "./constants";
 
 /**
@@ -30,6 +31,7 @@ export function newRun(seed: number): RunState & { gen: TrackGenerator } {
     obstacles: gen.obstacles,
     coinsOnTrack: gen.coins,
     killedBy: null,
+    stalledFor: 0,
     elapsed: 0,
     events: [],
     gen,
@@ -79,6 +81,20 @@ export function step(state: RunState & { gen: TrackGenerator }, tick: Tick): voi
   state.cadenceMult = tick.cadenceMult;
   state.speed = speedFor(state.distance, tick.cadenceMult);
   state.distance += state.speed * dt;
+
+  // Stop running and the run ends. Keyboard play holds the multiplier at 1, so
+  // this can only ever fire on the camera path.
+  if (tick.cadenceMult <= STALL_MULT) {
+    state.stalledFor += dt;
+    if (state.stalledFor >= STALL_DEATH_S) {
+      state.status = "dead";
+      state.killedBy = "stalled";
+      state.events.push("collision");
+      return;
+    }
+  } else {
+    state.stalledFor = 0;
+  }
 
   applyActions(state, tick.actions);
 

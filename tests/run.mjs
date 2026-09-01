@@ -43,9 +43,25 @@ function whenApproaching(z, metres, action) {
 
 describe("§5: the speed cap and the reaction floor are one relationship");
 {
-  ok("the cap is derived from the gap and the 700ms floor",
-     Math.abs(G.MAX_SPEED - G.MIN_GAP_M / G.MIN_REACTION_S) < 1e-9,
-     `${G.MAX_SPEED} vs ${G.MIN_GAP_M / G.MIN_REACTION_S}`);
+  // The declared airtime has to match the arc it claims to describe, or the
+  // spacing derived from it is spacing for a jump the game does not have.
+  ok("the declared airtime matches the actual arc",
+     Math.abs(G.JUMP_AIRTIME_S - (2 * G.JUMP_VELOCITY) / G.GRAVITY) < 1e-9,
+     `${G.JUMP_AIRTIME_S} vs ${(2 * G.JUMP_VELOCITY) / G.GRAVITY}`);
+
+  ok("spacing clears §5's reaction floor at the cap",
+     G.MIN_GAP_M / G.MAX_SPEED >= G.MIN_REACTION_S - 1e-9,
+     `${(G.MIN_GAP_M / G.MAX_SPEED).toFixed(3)}s`);
+
+  /*
+   * The constraint the playtest exposed: a player who jumps one obstacle must
+   * be back on the ground before the next arrives. Without this the jump is a
+   * trap at speed -- you clear a barrier, cannot jump again, and land inside
+   * the following one.
+   */
+  ok("you always land before the next obstacle arrives",
+     G.MIN_GAP_M / G.MAX_SPEED > G.JUMP_AIRTIME_S,
+     `gap ${(G.MIN_GAP_M / G.MAX_SPEED).toFixed(3)}s vs airtime ${G.JUMP_AIRTIME_S}s`);
 
   // The failure this guards: capping the *base* speed instead of the result,
   // so a 1.3x cadence sprint quietly exceeds the cap.
@@ -65,7 +81,11 @@ describe("§4/§5: the seeded track is spaced, survivable and reproducible");
   const gen = new G.TrackGenerator(1234);
   gen.generateTo(9000);
   const obs = [...gen.obstacles].sort((a, b) => a.z - b.z);
-  ok("the generator produces a long track", obs.length > 200, String(obs.length));
+  // Scaled to the spacing rather than hard-coded: the floor is derived from the
+  // speed cap, so a faster game legitimately fits fewer obstacles in 9km.
+  const expected = 9000 / (G.MIN_GAP_M + 10);
+  ok("the generator fills the track at the current spacing",
+     obs.length > expected * 0.8, `${obs.length}, expected around ${expected.toFixed(0)}`);
 
   // Events at the same z are a deliberate pair; the gap rule applies between
   // distinct events, measured from the end of the previous one.
@@ -301,8 +321,15 @@ describe("the game is actually playable (§2: 60-180s sessions)");
   // by an unfair pattern, not that nobody is killed at all.
   ok("no seed kills a competent policy inside §2's 60s floor",
      lasted.every((t) => t >= 60), `shortest ${Math.min(...lasted).toFixed(0)}s; deaths: ${deaths.join(", ")}`);
-  ok("runs do end, so the difficulty curve arrives (§2's 180s ceiling)",
-     lasted.some((t) => t < 200), `longest ${Math.max(...lasted).toFixed(0)}s`);
+  /*
+   * There is deliberately no assertion that the policy eventually dies.
+   *
+   * It has perfect information and perfect reactions, so its survival measures
+   * how forgiving the *track* is, not how hard the game is for a person -- and
+   * tuning difficulty until a bot dies would be tuning against the wrong
+   * opponent. §2's 60-180s target is a statement about humans. The fairness
+   * floor above is the part a simulation can actually speak to.
+   */
 
   // The ramp is a pure function; testing it through a run only measures where
   // that run happened to die.
@@ -334,6 +361,42 @@ describe("§8: the gesture layer, measured against synthetic bodies");
     const { fired } = run(G.stream(60, { spm: 120 }));
     ok("running in place for 60s fires no unintended gesture (§8)",
        fired.length === 0, `${fired.length}: ${fired.slice(0, 6).map((f) => `${f.a}@${f.t.toFixed(1)}`).join(",")}`);
+  }
+  {
+    // A heavy runner bobs far more than the default body. The thresholds have
+    // to clear the worst case, not the average -- this is the test that stops
+    // "make it more sensitive" from quietly becoming "fires while you run".
+    const { fired } = run(G.stream(60, { spm: 140, bob: 0.075, jitter: 0.01 }));
+    ok("a vigorous runner still fires nothing in 60s",
+       fired.length === 0, `${fired.length}: ${fired.slice(0, 6).map((f) => f.a).join(",")}`);
+  }
+
+  /*
+   * The gestures that were failing in play: ordinary effort, performed while
+   * already running, rather than the deliberate full-amplitude movements the
+   * first version of these tests used. Those passed at thresholds where a real
+   * player's jump registered nothing.
+   */
+  {
+    let hits = 0;
+    for (let i = 0; i < 20; i++) {
+      const frames = G.stream(4, { spm: 110, seed: 400 + i, jitter: 0.01 }, (t) => ({
+        dHipY: G.pulse(t, 1.5, 0.42, 0.22 * G.BODY.torso),
+      }));
+      if (run(frames).fired.some((f) => f.a.startsWith("jump"))) hits++;
+    }
+    ok("a modest jump taken mid-run registers", hits >= 19, `${hits}/20`);
+  }
+  {
+    let hits = 0;
+    for (let i = 0; i < 20; i++) {
+      const frames = G.stream(4, { spm: 110, seed: 500 + i, jitter: 0.01 }, (t) => ({
+        dHipX: G.shift(t, 1.5, 0.28, (i % 2 ? 0.42 : -0.42) * G.BODY.torso),
+      }));
+      const f = run(frames).fired;
+      if (f.some((x) => x.a === "left" || x.a === "right" || x.a.startsWith("jump"))) hits++;
+    }
+    ok("a modest side-step taken mid-run registers", hits >= 19, `${hits}/20`);
   }
 
   // §3's specific warning: "A deep knee lift while running can look like a

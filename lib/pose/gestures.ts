@@ -63,13 +63,30 @@ export type Tunables = {
   laneMode: "relative" | "absolute";
 };
 
+/*
+ * These were loosened substantially after playtesting: a jump and a side-step
+ * performed at ordinary effort, while already running, were not registering.
+ *
+ * A sweep against the synthetic bodies showed why. At the old thresholds a
+ * modest jump (0.22 torso) taken mid-run registered 0 times out of 20, and a
+ * modest side-step (0.42 torso) also 0 out of 20 -- while false positives
+ * stayed at zero all the way down to less than half these values. The numbers
+ * were not a tradeoff against §8's false-positive budget; they were simply too
+ * high, and the synthetic gestures used to check them were too vigorous to show
+ * it. That is the gap only a real body could find.
+ *
+ * They are still held above a runner's own bob, which is what actually
+ * constrains them: the rise gate is what keeps running in place from reading as
+ * jumping, and the velocity gate is what keeps standing up slowly from doing
+ * the same. Both are needed, and there is a test for each.
+ */
 export const DEFAULTS: Tunables = {
-  jumpRise: 0.16,
-  jumpVelocity: 0.55,
-  duckDrop: 0.14,
-  duckShoulderDrop: 0.1,
-  duckHoldMs: 150,
-  laneDeadzone: 0.42,
+  jumpRise: 0.12,
+  jumpVelocity: 0.35,
+  duckDrop: 0.12,
+  duckShoulderDrop: 0.08,
+  duckHoldMs: 130,
+  laneDeadzone: 0.26,
   arbitrationMs: 120,
   cooldownMs: 300,
   /*
@@ -125,6 +142,15 @@ export class GestureDetector {
   private center: number;
   private lastFire: Record<string, number> = {};
   private duckSince: number | null = null;
+  /**
+   * Set when a duck fires, cleared when the player stands back up.
+   *
+   * A crouch is held, not tapped, so the cooldown alone is the wrong guard: a
+   * 700ms crouch fired once, waited out the 300ms cooldown, and fired again
+   * while the player was still down. One crouch has to mean one duck however
+   * long it is held, which needs a latch on standing up rather than a timer.
+   */
+  private duckLatched = false;
   /** §3's arbitration: a jump is held briefly to see if it is a lateral hop. */
   private pendingJump: { at: number; startX: number; startCenter: number } | null = null;
   private stepTimes: number[] = [];
@@ -222,13 +248,19 @@ export class GestureDetector {
       shoulderDrop > this.tune.duckShoulderDrop;
     if (crouching && !this.pendingJump) {
       if (this.duckSince === null) this.duckSince = f.t;
-      else if ((f.t - this.duckSince) * 1000 >= this.tune.duckHoldMs && this.ready("duck", f.t)) {
+      else if (
+        !this.duckLatched &&
+        (f.t - this.duckSince) * 1000 >= this.tune.duckHoldMs &&
+        this.ready("duck", f.t)
+      ) {
         this.fire("duck", f.t);
+        this.duckLatched = true;
         this.duckSince = null;
         out.push("duck");
       }
     } else if (!crouching) {
       this.duckSince = null;
+      this.duckLatched = false;
     }
 
     return out;
