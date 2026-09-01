@@ -1,0 +1,10 @@
+# Deploys come from GitHub, so .gitignore is the real defence. This is the
+# backstop for the case we are not supposed to be in.
+.env
+.env.*
+!.env.example
+node_modules
+.next
+out
+tests
+.shots
