@@ -1,0 +1,50 @@
+/*
+ * §2's screen-distance problem drives every size here. The player is 2 to 2.5m
+ * from a laptop, so "HUD text at minimum 48px equivalent at 1080p" is a floor,
+ * not a suggestion -- these are set in vmin so they hold that apparent size on
+ * any screen rather than only on a 1080p one.
+ */
+.root { position: fixed; inset: 0; background: #0b0f17; overflow: hidden; }
+.canvas { width: 100%; height: 100%; display: block; }
+
+.hud {
+  position: absolute; top: 3vmin; left: 4vmin; right: 4vmin;
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  pointer-events: none; text-shadow: 0 2px 12px rgba(0,0,0,0.85);
+}
+.distance { font-size: 9vmin; font-weight: 800; color: #f2f6ff; line-height: 1; }
+.unit { font-size: 4vmin; color: #7f8ba3; margin-left: 0.6vmin; }
+.coins { font-size: 7vmin; font-weight: 800; color: #ffd84d; }
+.coins::before { content: "●"; margin-right: 1.4vmin; font-size: 5vmin; }
+
+/* Lane position as three pips: shape and colour, no text (§2). */
+.lanes {
+  position: absolute; bottom: 4vmin; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 2.2vmin; pointer-events: none;
+}
+.lanePip {
+  width: 7vmin; height: 1.4vmin; border-radius: 1vmin;
+  background: #2a3550;
+}
+.lanePipOn { background: #4dd2ff; box-shadow: 0 0 3vmin rgba(77,210,255,0.7); }
+
+.note {
+  position: absolute; bottom: 9vmin; left: 50%; transform: translateX(-50%);
+  margin: 0; font-size: 2.6vmin; color: #8b97b0; white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2vmin;
+  background: rgba(8,11,18,0.82); color: #f2f6ff; text-align: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.big { font-size: 11vmin; font-weight: 800; margin: 0; line-height: 1; }
+.sub { font-size: 4vmin; color: #9aa6bd; margin: 0; }
+.again {
+  margin-top: 2vmin; font-size: 4vmin; font-weight: 800; padding: 2vmin 6vmin;
+  border: 0; border-radius: 2vmin; background: #4dd2ff; color: #06222b; cursor: pointer;
+  font-family: inherit;
+}

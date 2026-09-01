@@ -1,0 +1,4 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; background: #0b0f17; color: #f2f6ff; overflow: hidden; }
+body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+button:focus-visible, a:focus-visible { outline: 3px solid #4dd2ff; outline-offset: 3px; }
