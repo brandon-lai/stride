@@ -312,5 +312,218 @@ describe("the game is actually playable (§2: 60-180s sessions)");
   ok("coins are collectable while surviving", totalCoins > 0, String(totalCoins));
 }
 
+describe("§8: the gesture layer, measured against synthetic bodies");
+{
+  const run = (frames, tune = {}) => {
+    const d = new G.GestureDetector(G.SYNTH_CAL, { ...G.DEFAULTS, ...tune });
+    const fired = [];
+    for (const f of frames) for (const a of d.update(f)) fired.push({ a, t: f.t });
+    return { fired, d };
+  };
+
+  // §8: "False positive rate below roughly 1 unintended gesture per 60 second
+  // run." Standing still is the easy case; running in place is the real one,
+  // because the hips bob and the knees rise, which is what a naive jump or
+  // crouch detector fires on.
+  {
+    const { fired } = run(G.stream(60, { spm: 0 }));
+    ok("standing still for 60s fires nothing", fired.length === 0,
+       fired.map((f) => f.a).join(",") || "none");
+  }
+  {
+    const { fired } = run(G.stream(60, { spm: 120 }));
+    ok("running in place for 60s fires no unintended gesture (§8)",
+       fired.length === 0, `${fired.length}: ${fired.slice(0, 6).map((f) => `${f.a}@${f.t.toFixed(1)}`).join(",")}`);
+  }
+
+  // §3's specific warning: "A deep knee lift while running can look like a
+  // crouch. Gate crouch detection on shoulder Y dropping too, not just hips."
+  {
+    const frames = G.stream(6, { spm: 0 }, (t) => ({ dHipY: -G.pulse(t, 2, 0.6, 0.3 * G.BODY.torso) }));
+    const { fired } = run(frames);
+    ok("hips dropping without the shoulders is not a crouch (§3)",
+       !fired.some((f) => f.a === "duck"), fired.map((f) => f.a).join(",") || "none");
+  }
+  {
+    const frames = G.stream(6, { spm: 0 }, (t) => ({
+      dHipY: -G.pulse(t, 2, 0.7, 0.28 * G.BODY.torso),
+      dShoulderY: -G.pulse(t, 2, 0.7, 0.42 * G.BODY.torso),
+    }));
+    const { fired } = run(frames);
+    ok("hips and shoulders dropping together is a crouch",
+       fired.filter((f) => f.a === "duck").length === 1,
+       fired.map((f) => f.a).join(",") || "none");
+  }
+
+  // §3: jump is a rise *with upward velocity*, which is what separates a hop
+  // from standing up slowly out of a crouch.
+  {
+    const frames = G.stream(6, { spm: 0 }, (t) => ({ dHipY: G.pulse(t, 2, 0.42, 0.34 * G.BODY.torso) }));
+    const { fired } = run(frames);
+    ok("a hop fires exactly one jump",
+       fired.length === 1 && fired[0].a === "jump", fired.map((f) => f.a).join(",") || "none");
+  }
+  {
+    // Rising the same distance over four seconds is not a jump.
+    const frames = G.stream(8, { spm: 0 }, (t) => ({ dHipY: G.shift(t, 1, 4, 0.34 * G.BODY.torso) }));
+    const { fired } = run(frames);
+    ok("standing up slowly is not a jump", !fired.some((f) => f.a === "jump"),
+       fired.map((f) => f.a).join(",") || "none");
+  }
+
+  {
+    const frames = G.stream(6, { spm: 0 }, (t) => ({ dHipX: G.shift(t, 2, 0.25, 0.6 * G.BODY.torso) }));
+    const { fired } = run(frames);
+    ok("a side step fires exactly one lane change",
+       fired.length === 1 && fired[0].a === "right", fired.map((f) => f.a).join(",") || "none");
+  }
+
+  // §3: "A jump to the side is both a Y spike and an X shift... Do not fire
+  // both." This is the arbitration the PRD calls out by name.
+  {
+    const frames = G.stream(6, { spm: 0 }, (t) => ({
+      dHipY: G.pulse(t, 2, 0.42, 0.34 * G.BODY.torso),
+      dHipX: G.shift(t, 2, 0.3, -0.62 * G.BODY.torso),
+    }));
+    const { fired } = run(frames);
+    ok("a lateral hop fires one combined event, not two (§3)",
+       fired.length === 1 && fired[0].a === "jumpLeft",
+       fired.map((f) => f.a).join(",") || "none");
+  }
+
+  // §3: "300ms cooldown per gesture type to prevent double-fires from tracking
+  // jitter."
+  {
+    const frames = G.stream(6, { spm: 0 }, (t) => ({
+      dHipY: G.pulse(t, 2, 0.3, 0.34 * G.BODY.torso) + G.pulse(t, 2.15, 0.3, 0.34 * G.BODY.torso),
+    }));
+    const { fired } = run(frames);
+    ok("two hops inside the cooldown fire once (§3)",
+       fired.filter((f) => f.a === "jump").length === 1, String(fired.length));
+  }
+
+  // §8: "Missed gesture rate below 5% for deliberate, clearly performed inputs."
+  {
+    let attempts = 0, hits = 0;
+    for (let i = 0; i < 20; i++) {
+      const at = 1.5;
+      const frames = G.stream(4, { spm: 0, seed: 100 + i, jitter: 0.008 }, (t) => ({
+        dHipY: G.pulse(t, at, 0.42, 0.34 * G.BODY.torso),
+      }));
+      attempts++;
+      if (run(frames).fired.some((f) => f.a === "jump")) hits++;
+    }
+    const missRate = 1 - hits / attempts;
+    ok("deliberate jumps are missed under 5% of the time (§8)",
+       missRate < 0.05, `${(missRate * 100).toFixed(0)}% missed (${hits}/${attempts})`);
+  }
+  {
+    let hits = 0;
+    for (let i = 0; i < 20; i++) {
+      const frames = G.stream(4, { spm: 0, seed: 200 + i, jitter: 0.008 }, (t) => ({
+        dHipX: G.shift(t, 1.5, 0.25, (i % 2 ? 0.62 : -0.62) * G.BODY.torso),
+      }));
+      if (run(frames).fired.some((f) => f.a === "left" || f.a === "right")) hits++;
+    }
+    ok("deliberate side steps are missed under 5% of the time (§8)",
+       1 - hits / 20 < 0.05, `${hits}/20`);
+  }
+}
+
+describe("§3: cadence drives speed, and pausing to breathe is survivable");
+{
+  const cadenceOf = (spm, seconds = 6) => {
+    const d = new G.GestureDetector(G.SYNTH_CAL);
+    for (const f of G.stream(seconds, { spm })) d.update(f);
+    return d.cadenceMultiplier();
+  };
+  ok("a brisk cadence approaches §3's 1.3x ceiling", cadenceOf(160) > 1.2, String(cadenceOf(160)));
+  ok("a slow jog sits near the middle", (() => { const m = cadenceOf(105); return m > 0.6 && m < 1.15; })(),
+     String(cadenceOf(105)));
+  ok("the multiplier never exceeds §3's range", cadenceOf(400) <= 1.3 + 1e-9, String(cadenceOf(400)));
+
+  // §3: "Dropping below a floor cadence for more than 3 seconds slows the
+  // character and eventually stalls the run. This keeps the game playable for
+  // someone who pauses to breathe without instantly killing them."
+  {
+    const d = new G.GestureDetector(G.SYNTH_CAL);
+    for (const f of G.stream(6, { spm: 140 })) d.update(f);
+    const running = d.cadenceMultiplier();
+    // Stop dead, keeping the clock going.
+    const stopped = G.stream(2.5, { spm: 0 }).map((f) => ({ ...f, t: f.t + 6 }));
+    for (const f of stopped) d.update(f);
+    const grace = d.cadenceMultiplier();
+    const longer = G.stream(4, { spm: 0 }).map((f) => ({ ...f, t: f.t + 8.5 }));
+    for (const f of longer) d.update(f);
+    const stalled = d.cadenceMultiplier();
+    ok("pausing briefly does not stall the run (§3's 3s grace)",
+       running > 1 && grace >= 0.5, `running ${running.toFixed(2)} -> grace ${grace.toFixed(2)}`);
+    ok("pausing for long enough stalls it", stalled < grace, `${grace.toFixed(2)} -> ${stalled.toFixed(2)}`);
+  }
+}
+
+describe("calibration scales thresholds to the body (§2, §3)");
+{
+  const frames = G.stream(5, { spm: 0 });
+  const cal = G.calibrate(frames);
+  ok("a 5s still capture calibrates", cal !== null);
+  ok("torso length is recovered", Math.abs(cal.torso - G.BODY.torso) < 0.01, String(cal.torso));
+  ok("lateral centre is recovered", Math.abs(cal.centerX - G.BODY.centerX) < 0.01, String(cal.centerX));
+  ok("a too-short capture is refused", G.calibrate(frames.slice(0, 10)) === null);
+
+  // The point of torso-relative thresholds: the same gesture on a body half the
+  // apparent size must still fire. This is §3's "invariant to distance from
+  // camera and body size", and it is the difference between a game that works
+  // for one person and one that works for anyone.
+  const small = frames.map((f) => ({
+    ...f,
+    hipY: f.hipY * 0.5, shoulderY: f.shoulderY * 0.5,
+    leftKneeY: f.leftKneeY * 0.5, rightKneeY: f.rightKneeY * 0.5,
+  }));
+  const smallCal = G.calibrate(small);
+  const d = new G.GestureDetector(smallCal);
+  const hop = G.stream(4, { spm: 0 }, (t) => ({ dHipY: G.pulse(t, 1.5, 0.42, 0.34 * smallCal.torso) }))
+    .map((f) => ({ ...f, hipY: f.hipY * 0.5 + (f.hipY * 0.5 - f.hipY * 0.5) }));
+  // Rebuild the half-size stream properly: scale the body, then add the gesture.
+  const hop2 = G.stream(4, { spm: 0 }).map((f, i) => {
+    const t = i / G.SYNTH_FPS;
+    return {
+      ...f,
+      hipY: f.hipY * 0.5 + G.pulse(t, 1.5, 0.42, 0.34 * smallCal.torso),
+      shoulderY: f.shoulderY * 0.5,
+      leftKneeY: f.leftKneeY * 0.5,
+      rightKneeY: f.rightKneeY * 0.5,
+    };
+  });
+  void hop;
+  const fired = [];
+  for (const f of hop2) for (const a of d.update(f)) fired.push(a);
+  ok("the same gesture fires on a body half the apparent size (§3)",
+     fired.includes("jump"), fired.join(",") || "none");
+}
+
+describe("§6: the tracker failing is handled, not ignored");
+{
+  ok("no landmarks means no frame", G.toFrame(undefined, 0) === null);
+  ok("a partial skeleton means no frame", G.toFrame([{ x: 0.5, y: 0.5 }], 0) === null);
+  {
+    // §6: "track the largest bounding box, which is normally the closest person"
+    const small = Array.from({ length: 29 }, (_, i) => ({ x: 0.1 + (i % 3) * 0.02, y: 0.1 + (i % 5) * 0.02 }));
+    const big = Array.from({ length: 29 }, (_, i) => ({ x: 0.2 + (i % 3) * 0.2, y: 0.1 + (i % 5) * 0.15 }));
+    ok("the largest person in frame wins", G.largestPose([small, big]) === big);
+  }
+  {
+    const f = G.stream(1, { spm: 0 })[0];
+    ok("framing rejects an empty frame", G.checkFraming(null).reason === "no-person");
+    ok("framing accepts a well-placed body", G.checkFraming(f).ok, JSON.stringify(G.checkFraming(f)));
+    ok("framing catches someone too close",
+       G.checkFraming({ ...f, shoulderY: f.hipY + 0.4 }).reason === "too-close");
+    ok("framing catches someone too far",
+       G.checkFraming({ ...f, shoulderY: f.hipY + 0.05 }).reason === "too-far");
+    ok("framing catches someone off to the side",
+       G.checkFraming({ ...f, hipX: 0.9 }).reason === "off-center");
+  }
+}
+
 console.log(`\n${pass} passed, ${fails.length} failed`);
 if (fails.length) { console.log("\nFailures:"); fails.forEach((f) => console.log(" - " + f)); process.exit(1); }
